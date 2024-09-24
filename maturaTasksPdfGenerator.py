@@ -1,5 +1,6 @@
 from PyPDF2 import PdfReader, PdfWriter
 from maturaTasksViewer import find_tasks_in_pdf
+from mergePages import merge_pages_vertically
 
 class Matura:
     def __init__(self, path:str):
@@ -17,11 +18,11 @@ class Matura:
                 page.mediabox.bottom = (height-bottom)
             elif up!=None:
                 page.mediabox.top = (height-up)
-                page.mediabox.bottom = (60)
+                if not self.dis_marg: page.mediabox.bottom = (60)
             elif bottom!=None:
                 page.mediabox.bottom = (height-bottom)
             else:
-                page.mediabox.bottom = (60)
+                if not self.dis_marg: page.mediabox.bottom = (60)
             
             self.writer.add_page(page)
 
@@ -29,6 +30,7 @@ class Matura:
             with open(path, "wb") as fp:
                 self.writer.write(fp)
             self.writer.close()
+            merge_pages_vertically(path)
 
         
         if type(task)==type({}):
@@ -53,16 +55,31 @@ class Matura:
             
         save(self, "./tasks/"+number+name+".pdf")
 
-    def autoCreator(self):
+    def autoCreator(self, disable_margins:bool=False):
+        self.dis_marg = disable_margins
         tasklist=[]
+        tasklistnotedited=[]
+        last = False
         for task in find_tasks_in_pdf(self.path):
             task=list(task.values())
+            if last:
+                try:
+                    float(task[0][:-1])
+                    tasklist.append(task)
+                except:
+                    tasklist.pop()
+                    task[0]=last[0]
+                    task[1]=last[1]
+                    task[2]=last[2]
+                    task[4]=last[4]
+                    tasklist.append(task)
+            else:
+                tasklist.append(task)
+            last=task
+
+
+        for task in tasklist:
             self.createTask(task)
 
-matura = Matura("test.pdf")
-matura.autoCreator()
+Matura("test.pdf").autoCreator()
 
-# tasklist=[]
-# for task in find_tasks_in_pdf("test.pdf"):
-#     task=list(task.values())
-#     matura.createTask(task)
